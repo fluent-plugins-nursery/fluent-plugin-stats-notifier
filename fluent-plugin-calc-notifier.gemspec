@@ -9,6 +9,7 @@ Gem::Specification.new do |s|
   s.homepage    = "https://github.com/sonots/fluent-plugin-calc-notifier"
   s.summary     = "Fluentd plugin to aggregate count messages with calculation and then do thresholding"
   s.description = s.summary
+  s.licenses    = ["MIT"]
 
   s.rubyforge_project = "fluent-plugin-calc-notifier"
 
