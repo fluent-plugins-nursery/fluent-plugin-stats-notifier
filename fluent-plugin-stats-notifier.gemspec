@@ -2,16 +2,16 @@
 $:.push File.expand_path("../lib", __FILE__)
 
 Gem::Specification.new do |s|
-  s.name        = "fluent-plugin-calc-notifier"
+  s.name        = "fluent-plugin-stats-notifier"
   s.version     = "0.0.1"
-  s.authors     = ["Naotoshi SEO"]
+  s.authors     = ["Naotoshi Seo"]
   s.email       = ["sonots@gmail.com"]
-  s.homepage    = "https://github.com/sonots/fluent-plugin-calc-notifier"
-  s.summary     = "Fluentd plugin to aggregate count messages with calculation and then do thresholding"
+  s.homepage    = "https://github.com/sonots/fluent-plugin-stats-notifier"
+  s.summary     = "Fluentd plugin to calculate statistics and then thresholding"
   s.description = s.summary
   s.licenses    = ["MIT"]
 
-  s.rubyforge_project = "fluent-plugin-calc-notifier"
+  s.rubyforge_project = "fluent-plugin-stats-notifier"
 
   s.files         = `git ls-files`.split("\n")
   s.test_files    = `git ls-files -- {test,spec,features}/*`.split("\n")

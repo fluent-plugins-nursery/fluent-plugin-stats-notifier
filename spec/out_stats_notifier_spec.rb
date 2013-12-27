@@ -8,14 +8,14 @@ class Fluent::Test::OutputTestDriver
   end
 end
 
-describe Fluent::CalcNotifierOutput do
+describe Fluent::StatsNotifierOutput do
   before { Fluent::Test.setup }
   CONFIG = %[
     target_key 5xx_count
     tag foo
   ]
   let(:tag) { 'foo.bar' }
-  let(:driver) { Fluent::Test::OutputTestDriver.new(Fluent::CalcNotifierOutput, tag).configure(config) }
+  let(:driver) { Fluent::Test::OutputTestDriver.new(Fluent::StatsNotifierOutput, tag).configure(config) }
 
   describe 'test configure' do
     describe 'bad configuration' do

@@ -1,11 +1,11 @@
-# fluent-plugin-calc-notifier [![Build Status](https://secure.travis-ci.org/sonots/fluent-plugin-calc-notifier.png?branch=master)](http://travis-ci.org/sonots/fluent-plugin-calc-notifier) [![Dependency Status](https://gemnasium.com/sonots/fluent-plugin-calc-notifier.png)](https://gemnasium.com/sonots/fluent-plugin-calc-notifier)
+# fluent-plugin-stats-notifier [![Build Status](https://secure.travis-ci.org/sonots/fluent-plugin-stats-notifier.png?branch=master)](http://travis-ci.org/sonots/fluent-plugin-stats-notifier)
 
-Fluentd plugin to aggregate count messages with calculation and then thresholding
+Fluentd plugin to calculate statistics and then thresholding
 
 ## Configuration
 
   <store>
-    type calc_notifier
+    type stats_notifier
     tag notifier
     interval 5
     target_key 4xx_count
@@ -83,5 +83,5 @@ See [CHANGELOG.md](CHANGELOG.md) for details.
 
 ## Copyright
 
-Copyright (c) 2013 Naotoshi SEO. See [LICENSE](LICENSE) for details.
+Copyright (c) 2013 Naotoshi Seo. See [LICENSE](LICENSE) for details.
 

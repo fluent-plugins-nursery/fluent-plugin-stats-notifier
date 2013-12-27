@@ -1,6 +1,6 @@
 # encoding: UTF-8
-class Fluent::CalcNotifierOutput < Fluent::Output
-  Fluent::Plugin.register_output('calc_notifier', self)
+class Fluent::StatsNotifierOutput < Fluent::Output
+  Fluent::Plugin.register_output('stats_notifier', self)
 
   def initialize
     super
@@ -29,10 +29,10 @@ class Fluent::CalcNotifierOutput < Fluent::Output
     @interval = @interval.to_i
 
     if @less_than and @less_equal
-      raise Fluent::ConfigError, "out_calc_notiifer: Only either of `less_than` or `less_equal` can be specified."
+      raise Fluent::ConfigError, "out_stats_notiifer: Only either of `less_than` or `less_equal` can be specified."
     end
     if @greater_than and @greater_equal
-      raise Fluent::ConfigError, "out_calc_notiifer: Only either of `greater_than` or `greater_equal` can be specified."
+      raise Fluent::ConfigError, "out_stats_notiifer: Only either of `greater_than` or `greater_equal` can be specified."
     end
 
     case @compare_with
@@ -45,7 +45,7 @@ class Fluent::CalcNotifierOutput < Fluent::Output
     when "avg"
       @compare_with = :avg
     else
-      raise Fluent::ConfigError, "out_calc_notiifer: `compare_with` must be one of `sum`, `max`, `min`, `avg`"
+      raise Fluent::ConfigError, "out_stats_notiifer: `compare_with` must be one of `sum`, `max`, `min`, `avg`"
     end
 
     @counts = {}
@@ -70,11 +70,11 @@ class Fluent::CalcNotifierOutput < Fluent::Output
   def emit(tag, es, chain)
     key = @target_key
 
-    # calc
+    # stats
     count = 0; matches = {}
     es.each do |time,record|
       if record[key]
-        # @todo: make an option for calcuation in the same tag. now only sum is supported
+        # @todo: make an option for statsuation in the same tag. now only sum is supported
         matches[key] = (matches[key] ? matches[key] + record[key] : record[key])
       end
       count += 1
@@ -85,7 +85,7 @@ class Fluent::CalcNotifierOutput < Fluent::Output
     @matches[tag] ||= {}
     @mutex.synchronize do
       if matches[key]
-        # @todo: make an option for calcuation in the same tag. now only sum is supported
+        # @todo: make an option for statsuation in the same tag. now only sum is supported
         @matches[tag][key] = (@matches[tag][key] ? @matches[tag][key] + matches[key] : matches[key])
       end
       @counts[tag] += count
@@ -170,7 +170,7 @@ class Fluent::CalcNotifierOutput < Fluent::Output
         }, f)
       end
     rescue => e
-      $log.warn "out_calc_notifier: Can't write store_file #{e.class} #{e.message}"
+      $log.warn "out_stats_notifier: Can't write store_file #{e.class} #{e.message}"
     end
   end
 
@@ -195,14 +195,14 @@ class Fluent::CalcNotifierOutput < Fluent::Output
             # skip the saved duration to continue counting
             @last_checked = Fluent::Engine.now - @saved_duration
           else
-            $log.warn "out_calc_notifier: stored data is outdated. ignore stored data"
+            $log.warn "out_stats_notifier: stored data is outdated. ignore stored data"
           end
         else
-          $log.warn "out_calc_notiifer: configuration param was changed. ignore stored data"
+          $log.warn "out_stats_notiifer: configuration param was changed. ignore stored data"
         end
       end
     rescue => e
-      $log.warn "out_calc_notifier: Can't load store_file #{e.class} #{e.message}"
+      $log.warn "out_stats_notifier: Can't load store_file #{e.class} #{e.message}"
     end
   end
 
