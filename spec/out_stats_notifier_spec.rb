@@ -145,6 +145,35 @@ describe Fluent::StatsNotifierOutput do
       end
     end
 
+    context 'aggregate' do
+      let(:emit) do
+        driver.run do
+          driver.emit_with_tag({"5xx_count"=>2}, time, 'foo.bar1')
+          driver.emit_with_tag({"5xx_count"=>6}, time, 'foo.bar2')
+        end
+        driver.instance.flush_emit(0)
+      end
+
+      context 'all' do
+        let(:config) { CONFIG + %[aggregate all \n tag foo \n compare_with sum] }
+        before do
+          Fluent::Engine.stub(:now).and_return(time)
+          Fluent::Engine.should_receive(:emit).with("foo", time, {"5xx_count"=>8.0})
+        end
+        it { emit }
+      end
+
+      context 'tag' do
+        let(:config) { CONFIG + %[aggregate tag \n add_tag_prefix add] }
+        before do
+          Fluent::Engine.stub(:now).and_return(time)
+          Fluent::Engine.should_receive(:emit).with("add.foo.bar1", time, {"5xx_count"=>2.0})
+          Fluent::Engine.should_receive(:emit).with("add.foo.bar2", time, {"5xx_count"=>6.0})
+        end
+        it { emit }
+      end
+    end
+
     context 'compare_with' do
       let(:emit) do
         driver.run do
