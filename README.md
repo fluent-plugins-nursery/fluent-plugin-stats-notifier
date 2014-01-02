@@ -55,15 +55,15 @@ then this plugin emits an message because the max of `4xx_count` is greater than
 
 - tag
 
-    The output tag name. 
+    The output tag name. Required for `aggregate all`.
 
 - add_tag_prefix
 
-    (not available yet) Add tag prefix for output message. 
+    Add tag prefix for output message. Required for `aggregate tag`.
 
 - aggragate
     
-    (not available yet) Do calculation by each `tag` or `all`. The default value is `tag`.
+    Do calculation for each `tag` or `all`. The defaultis `all`.
 
 - store_file
 
