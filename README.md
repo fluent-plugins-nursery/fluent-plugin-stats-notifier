@@ -4,15 +4,17 @@ Fluentd plugin to calculate statistics and then thresholding
 
 ## Configuration
 
-  <store>
-    type stats_notifier
-    tag notifier
-    interval 5
-    target_key 4xx_count
-    greater_equal 4
-    compare_with max
-    store_file /path/to/store_file.dat
-  </store>
+```
+<store>
+  type stats_notifier
+  tag notifier
+  interval 5
+  target_key 4xx_count
+  greater_equal 4
+  compare_with max
+  store_file /path/to/store_file.dat
+</store>
+```
 
 Assuming following inputs are coming:
 
