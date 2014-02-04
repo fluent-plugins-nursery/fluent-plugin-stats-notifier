@@ -2,6 +2,11 @@
 class Fluent::StatsNotifierOutput < Fluent::Output
   Fluent::Plugin.register_output('stats_notifier', self)
 
+  # To support log_level option implemented by Fluentd v0.10.43
+  unless method_defined?(:log)
+    define_method("log") { $log }
+  end
+
   def initialize
     super
     require 'pathname'
@@ -120,7 +125,7 @@ class Fluent::StatsNotifierOutput < Fluent::Output
 
     chain.next
   rescue => e
-    $log.warn "#{e.class} #{e.message} #{e.backtrace.first}"
+    log.warn "#{e.class} #{e.message} #{e.backtrace.first}"
   end
 
   # thread callback
@@ -138,7 +143,7 @@ class Fluent::StatsNotifierOutput < Fluent::Output
           @last_checked = now
         end
       rescue => e
-        $log.warn "#{e.class} #{e.message} #{e.backtrace.first}"
+        log.warn "#{e.class} #{e.message} #{e.backtrace.first}"
       end
     end
   end
@@ -205,7 +210,7 @@ class Fluent::StatsNotifierOutput < Fluent::Output
         }, f)
       end
     rescue => e
-      $log.warn "out_stats_notifier: Can't write store_file #{e.class} #{e.message}"
+      log.warn "out_stats_notifier: Can't write store_file #{e.class} #{e.message}"
     end
   end
 
@@ -230,14 +235,14 @@ class Fluent::StatsNotifierOutput < Fluent::Output
             # skip the saved duration to continue counting
             @last_checked = Fluent::Engine.now - @saved_duration
           else
-            $log.warn "out_stats_notifier: stored data is outdated. ignore stored data"
+            log.warn "out_stats_notifier: stored data is outdated. ignore stored data"
           end
         else
-          $log.warn "out_stats_notiifer: configuration param was changed. ignore stored data"
+          log.warn "out_stats_notiifer: configuration param was changed. ignore stored data"
         end
       end
     rescue => e
-      $log.warn "out_stats_notifier: Can't load store_file #{e.class} #{e.message}"
+      log.warn "out_stats_notifier: Can't load store_file #{e.class} #{e.message}"
     end
   end
 
