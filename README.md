@@ -5,7 +5,7 @@ Fluentd plugin to calculate statistics and then thresholding
 ## Configuration
 
 ```
-<store>
+<match foo.**>
   type stats_notifier
   tag notifier
   interval 5
@@ -13,7 +13,7 @@ Fluentd plugin to calculate statistics and then thresholding
   greater_equal 4
   compare_with max
   store_file /path/to/store_file.dat
-</store>
+</match>
 ```
 
 Assuming following inputs are coming:
