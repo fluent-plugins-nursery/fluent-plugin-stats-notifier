@@ -18,7 +18,9 @@ class Fluent::StatsNotifierOutput < Fluent::Output
   config_param :less_equal, :float, :default => nil
   config_param :greater_than, :float, :default => nil
   config_param :greater_equal, :float, :default => nil
-  config_param :compare_with, :string, :default => "max"
+  config_param :stats, :string, :default => "max"
+  config_param :compare_with, :string, :default => nil # Obsolete. Use aggregate_stats
+  config_param :aggregate_stats, :string, :default => "max" # Work only with aggregate :all
   config_param :tag, :string
   config_param :add_tag_prefix, :string, :default => nil
   config_param :remove_tag_prefix, :string, :default => nil
@@ -26,7 +28,7 @@ class Fluent::StatsNotifierOutput < Fluent::Output
   config_param :store_file, :string, :default => nil
 
   attr_accessor :counts
-  attr_accessor :matches
+  attr_accessor :queues
   attr_accessor :saved_duration
   attr_accessor :saved_at
   attr_accessor :last_checked
@@ -43,24 +45,40 @@ class Fluent::StatsNotifierOutput < Fluent::Output
       raise Fluent::ConfigError, "out_stats_notifier: Only either of `greater_than` or `greater_equal` can be specified."
     end
 
-    case @compare_with
+    @aggregate_stats = @compare_with if @compare_with # Support old version compatibility
+    case @aggregate_stats
     when "sum"
-      @compare_with = :sum
+      @aggregate_stats = :sum
     when "max"
-      @compare_with = :max
+      @aggregate_stats = :max
     when "min"
-      @compare_with = :min
+      @aggregate_stats = :min
     when "avg"
-      @compare_with = :avg
+      @aggregate_stats = :avg
     else
-      raise Fluent::ConfigError, "out_stats_notifier: `compare_with` must be one of `sum`, `max`, `min`, `avg`"
+      raise Fluent::ConfigError, "out_stats_notifier: `aggregate_stats` must be one of `sum`, `max`, `min`, `avg`"
+    end
+
+    case @stats
+    when "sum"
+      @stats = :sum
+    when "max"
+      @stats = :max
+    when "min"
+      @stats = :min
+    when "avg"
+      @stats = :avg
+    else
+      raise Fluent::ConfigError, "out_stats_notifier: `stats` must be one of `sum`, `max`, `min`, `avg`"
     end
 
     case @aggregate
     when 'all'
       raise Fluent::ConfigError, "out_stats_notifier: `tag` must be specified with aggregate all" if @tag.nil?
+      @aggregate = :all
     when 'tag'
       raise Fluent::ConfigError, "out_stats_notifier: `add_tag_prefix` must be specified with aggregate tag" if @add_tag_prefix.nil?
+      @aggregate = :tag
     else
       raise Fluent::ConfigError, "out_stats_notifier: aggregate allows tag/all"
     end
@@ -81,7 +99,7 @@ class Fluent::StatsNotifierOutput < Fluent::Output
       end
 
     @counts = {}
-    @matches = {}
+    @queues = {}
     @mutex = Mutex.new
   end
 
@@ -102,23 +120,23 @@ class Fluent::StatsNotifierOutput < Fluent::Output
   def emit(tag, es, chain)
     key = @target_key
 
-    # stats
-    count = 0; matches = {}
+    # enqueus
+    count = 0; queues = {}
     es.each do |time,record|
       if record[key]
-        # @todo: make an option for calcuation in the same tag. now only sum is supported
-        matches[key] = (matches[key] ? matches[key] + record[key] : record[key])
+        queues[key] ||= []
+        queues[key] << record[key]
       end
       count += 1
     end
 
     # thread safe merge
     @counts[tag] ||= 0
-    @matches[tag] ||= {}
+    @queues[tag] ||= {}
     @mutex.synchronize do
-      if matches[key]
-        # @todo: make an option for calcuation in the same tag. now only sum is supported
-        @matches[tag][key] = (@matches[tag][key] ? @matches[tag][key] + matches[key] : matches[key])
+      if queues[key]
+        @queues[tag][key] ||= []
+        @queues[tag][key].concat(queues[key])
       end
       @counts[tag] += count
     end
@@ -151,26 +169,32 @@ class Fluent::StatsNotifierOutput < Fluent::Output
   # This method is the real one to emit
   def flush_emit(step)
     time = Fluent::Engine.now
-    counts, matches, @counts, @matches = @counts, @matches, {}, {}
+    counts, queues, @counts, @queues = @counts, @queues, {}, {}
 
-    if @aggregate == 'all'
-      values = matches.values.map {|match| match[@target_key] }.compact
-      stats = get_stats(values)
-      output = generate_output(stats) if stats
+    # Get statistical value among events
+    evented_queues = {}
+    queues.each do |tag, queue|
+      evented_queues[tag] ||= {}
+      evented_queues[tag][@target_key] = get_stats(queue[@target_key], @stats) if queue[@target_key]
+    end
+
+    if @aggregate == :all
+      values = evented_queues.values.map {|queue| queue[@target_key] }.compact
+      value = get_stats(values, @aggregate_stats)
+      output = generate_output(value) if value
       Fluent::Engine.emit(@tag, time, output) if output
     else # aggregate tag
-      matches.each do |tag, match|
-        values = [match[@target_key]]
-        stats = get_stats(values)
-        output = generate_output(stats) if stats
+      evented_queues.each do |tag, queue|
+        value = queue[@target_key]
+        output = generate_output(value) if value
         emit_tag = @tag_proc.call(tag)
         Fluent::Engine.emit(emit_tag, time, output) if output
       end
     end
   end
 
-  def get_stats(values)
-    case @compare_with
+  def get_stats(values, method = :max)
+    case method
     when :sum
       stats = values.inject(:+)
     when :max
@@ -182,15 +206,15 @@ class Fluent::StatsNotifierOutput < Fluent::Output
     end
   end
 
-  def generate_output(stats)
-    return nil if stats == 0 # ignore 0 because standby nodes receive 0 message usually
-    return nil if @less_than     and @less_than   <= stats
-    return nil if @less_equal    and @less_equal  <  stats
-    return nil if @greater_than  and stats <= @greater_than
-    return nil if @greater_equal and stats <  @greater_equal
+  def generate_output(value)
+    return nil if value == 0 # ignore 0 because standby nodes receive 0 message usually
+    return nil if @less_than     and @less_than   <= value
+    return nil if @less_equal    and @less_equal  <  value
+    return nil if @greater_than  and value <= @greater_than
+    return nil if @greater_equal and value <  @greater_equal
 
     output = {}
-    output[@target_key] = stats
+    output[@target_key] = value
     output
   end
 
@@ -206,7 +230,7 @@ class Fluent::StatsNotifierOutput < Fluent::Output
         @saved_duration = @saved_at - @last_checked
         Marshal.dump({
           :counts           => @counts,
-          :matches          => @matches,
+          :queues          => @queues,
           :saved_at         => @saved_at,
           :saved_duration   => @saved_duration,
           :target_key       => @target_key,
@@ -228,17 +252,20 @@ class Fluent::StatsNotifierOutput < Fluent::Output
       f.open('rb') do |f|
         stored = Marshal.load(f)
         if stored[:target_key] == @target_key
+          if stored[:queues]
+            if Fluent::Engine.now <= stored[:saved_at] + interval
+              @counts = stored[:counts]
+              @queues = stored[:queues]
+              @saved_at = stored[:saved_at]
+              @saved_duration = stored[:saved_duration]
 
-          if Fluent::Engine.now <= stored[:saved_at] + interval
-            @counts = stored[:counts]
-            @matches = stored[:matches]
-            @saved_at = stored[:saved_at]
-            @saved_duration = stored[:saved_duration]
-
-            # skip the saved duration to continue counting
-            @last_checked = Fluent::Engine.now - @saved_duration
+              # skip the saved duration to continue counting
+              @last_checked = Fluent::Engine.now - @saved_duration
+            else
+              log.warn "out_stats_notifier: stored data is outdated. ignore stored data"
+            end
           else
-            log.warn "out_stats_notifier: stored data is outdated. ignore stored data"
+            log.warn "out_stats_notifier: stored data is incompatible. ignore stored data"
           end
         else
           log.warn "out_stats_notifier: configuration param was changed. ignore stored data"
