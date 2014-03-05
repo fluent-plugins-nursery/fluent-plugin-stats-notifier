@@ -155,39 +155,42 @@ class Fluent::StatsNotifierOutput < Fluent::Output
 
     if @aggregate == 'all'
       values = matches.values.map {|match| match[@target_key] }.compact
-      output = generate_output(values)
+      stats = get_stats(values)
+      output = generate_output(stats) if stats
       Fluent::Engine.emit(@tag, time, output) if output
     else # aggregate tag
       matches.each do |tag, match|
         values = [match[@target_key]]
-        output = generate_output(values)
+        stats = get_stats(values)
+        output = generate_output(stats) if stats
         emit_tag = @tag_proc.call(tag)
         Fluent::Engine.emit(emit_tag, time, output) if output
       end
     end
   end
 
-  def generate_output(values)
+  def get_stats(values)
     case @compare_with
     when :sum
-      target_value = values.inject(:+)
+      stats = values.inject(:+)
     when :max
-      target_value = values.max
+      stats = values.max
     when :min
-      target_value = values.min
+      stats = values.min
     when :avg
-      target_value = values.inject(:+) / values.count unless values.empty?
+      stats = values.inject(:+) / values.count unless values.empty?
     end
+  end
 
-    return nil if target_value.nil?
-    return nil if target_value == 0 # ignore 0 because standby nodes receive 0 message usually
-    return nil if @less_than     and @less_than   <= target_value
-    return nil if @less_equal    and @less_equal  <  target_value
-    return nil if @greater_than  and target_value <= @greater_than
-    return nil if @greater_equal and target_value <  @greater_equal
+  def generate_output(stats)
+    return nil if stats == 0 # ignore 0 because standby nodes receive 0 message usually
+    return nil if @less_than     and @less_than   <= stats
+    return nil if @less_equal    and @less_equal  <  stats
+    return nil if @greater_than  and stats <= @greater_than
+    return nil if @greater_equal and stats <  @greater_equal
 
     output = {}
-    output[@target_key] = target_value
+    output[@target_key] = stats
     output
   end
 
