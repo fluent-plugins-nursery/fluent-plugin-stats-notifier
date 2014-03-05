@@ -37,10 +37,10 @@ class Fluent::StatsNotifierOutput < Fluent::Output
     @interval = @interval.to_i
 
     if @less_than and @less_equal
-      raise Fluent::ConfigError, "out_stats_notiifer: Only either of `less_than` or `less_equal` can be specified."
+      raise Fluent::ConfigError, "out_stats_notifier: Only either of `less_than` or `less_equal` can be specified."
     end
     if @greater_than and @greater_equal
-      raise Fluent::ConfigError, "out_stats_notiifer: Only either of `greater_than` or `greater_equal` can be specified."
+      raise Fluent::ConfigError, "out_stats_notifier: Only either of `greater_than` or `greater_equal` can be specified."
     end
 
     case @compare_with
@@ -53,16 +53,16 @@ class Fluent::StatsNotifierOutput < Fluent::Output
     when "avg"
       @compare_with = :avg
     else
-      raise Fluent::ConfigError, "out_stats_notiifer: `compare_with` must be one of `sum`, `max`, `min`, `avg`"
+      raise Fluent::ConfigError, "out_stats_notifier: `compare_with` must be one of `sum`, `max`, `min`, `avg`"
     end
 
     case @aggregate
     when 'all'
-      raise Fluent::ConfigError, "anomalydetect: `tag` must be specified with aggregate all" if @tag.nil?
+      raise Fluent::ConfigError, "out_stats_notifier: `tag` must be specified with aggregate all" if @tag.nil?
     when 'tag'
-      raise Fluent::ConfigError, "anomalydetect: `add_tag_prefix` must be specified with aggregate tag" if @add_tag_prefix.nil?
+      raise Fluent::ConfigError, "out_stats_notifier: `add_tag_prefix` must be specified with aggregate tag" if @add_tag_prefix.nil?
     else
-      raise Fluent::ConfigError, "anomalydetect: aggregate allows tag/all"
+      raise Fluent::ConfigError, "out_stats_notifier: aggregate allows tag/all"
     end
 
     @tag_prefix = "#{@add_tag_prefix}." if @add_tag_prefix
@@ -238,7 +238,7 @@ class Fluent::StatsNotifierOutput < Fluent::Output
             log.warn "out_stats_notifier: stored data is outdated. ignore stored data"
           end
         else
-          log.warn "out_stats_notiifer: configuration param was changed. ignore stored data"
+          log.warn "out_stats_notifier: configuration param was changed. ignore stored data"
         end
       end
     rescue => e
