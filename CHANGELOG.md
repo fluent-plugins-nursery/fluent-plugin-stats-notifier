@@ -1,3 +1,9 @@
+## 0.0.4
+
+Enchancements:
+
+* Add `add_tag_suffix` and `remove_tag_suffix` options
+
 ## 0.0.3
 
 Enchancements
