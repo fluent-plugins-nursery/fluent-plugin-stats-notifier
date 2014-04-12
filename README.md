@@ -127,6 +127,18 @@ Output will be as following:
 
     Add tag prefix for output message. Required for `aggregate tag`.
 
+- remove_tag_prefix
+
+    Remove tag prefix for output message.
+
+- add_tag_suffix
+
+    Add tag suffix for output message.
+
+- remove_tag_suffix
+
+    Remove tag suffix for output message.
+
 - aggragate
     
     Do calculation for each `tag` or `all`. The defaultis `all`.

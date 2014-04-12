@@ -21,9 +21,11 @@ class Fluent::StatsNotifierOutput < Fluent::Output
   config_param :stats, :string, :default => "max"
   config_param :compare_with, :string, :default => nil # Obsolete. Use aggregate_stats
   config_param :aggregate_stats, :string, :default => "max" # Work only with aggregate :all
-  config_param :tag, :string
+  config_param :tag, :string, :default => nil
   config_param :add_tag_prefix, :string, :default => nil
   config_param :remove_tag_prefix, :string, :default => nil
+  config_param :add_tag_suffix, :string, :default => nil
+  config_param :remove_tag_suffix, :string, :default => nil
   config_param :aggregate, :string, :default => 'all'
   config_param :store_file, :string, :default => nil
 
@@ -72,31 +74,21 @@ class Fluent::StatsNotifierOutput < Fluent::Output
       raise Fluent::ConfigError, "out_stats_notifier: `stats` must be one of `sum`, `max`, `min`, `avg`"
     end
 
+    if @tag.nil? and @add_tag_prefix.nil? and @remove_tag_prefix.nil? and @add_tag_suffix.nil? and @remove_tag_suffix.nil?
+      raise Fluent::ConfigError, "out_stats_notifier: No tag option is specified"
+    end
+    @tag_proc = tag_proc
+
     case @aggregate
     when 'all'
       raise Fluent::ConfigError, "out_stats_notifier: `tag` must be specified with aggregate all" if @tag.nil?
       @aggregate = :all
     when 'tag'
-      raise Fluent::ConfigError, "out_stats_notifier: `add_tag_prefix` must be specified with aggregate tag" if @add_tag_prefix.nil?
+      # raise Fluent::ConfigError, "out_stats_notifier: `add_tag_prefix` must be specified with aggregate tag" if @add_tag_prefix.nil?
       @aggregate = :tag
     else
       raise Fluent::ConfigError, "out_stats_notifier: aggregate allows tag/all"
     end
-
-    @tag_prefix = "#{@add_tag_prefix}." if @add_tag_prefix
-    @tag_prefix_match = "#{@remove_tag_prefix}." if @remove_tag_prefix
-    @tag_proc =
-      if @tag_prefix and @tag_prefix_match
-        Proc.new {|tag| "#{@tag_prefix}#{lstrip(tag, @tag_prefix_match)}" }
-      elsif @tag_prefix_match
-        Proc.new {|tag| lstrip(tag, @tag_prefix_match) }
-      elsif @tag_prefix
-        Proc.new {|tag| "#{@tag_prefix}#{tag}" }
-      elsif @tag
-        Proc.new {|tag| @tag }
-      else
-        Proc.new {|tag| tag }
-      end
 
     @counts = {}
     @queues = {}
@@ -216,6 +208,27 @@ class Fluent::StatsNotifierOutput < Fluent::Output
     output = {}
     output[@target_key] = value
     output
+  end
+
+  def tag_proc
+    rstrip = Proc.new {|str, substr| str.chomp(substr) }
+    lstrip = Proc.new {|str, substr| str.start_with?(substr) ? str[substr.size..-1] : str }
+    tag_prefix = "#{rstrip.call(@add_tag_prefix, '.')}." if @add_tag_prefix
+    tag_suffix = ".#{lstrip.call(@add_tag_suffix, '.')}" if @add_tag_suffix
+    tag_prefix_match = "#{rstrip.call(@remove_tag_prefix, '.')}." if @remove_tag_prefix
+    tag_suffix_match = ".#{lstrip.call(@remove_tag_suffix, '.')}" if @remove_tag_suffix
+    tag_fixed = @tag if @tag
+    if tag_fixed
+      Proc.new {|tag| tag_fixed }
+    elsif tag_prefix_match and tag_suffix_match
+      Proc.new {|tag| "#{tag_prefix}#{rstrip.call(lstrip.call(tag, tag_prefix_match), tag_suffix_match)}#{tag_suffix}" }
+    elsif tag_prefix_match
+      Proc.new {|tag| "#{tag_prefix}#{lstrip.call(tag, tag_prefix_match)}#{tag_suffix}" }
+    elsif tag_suffix_match
+      Proc.new {|tag| "#{tag_prefix}#{rstrip.call(tag, tag_suffix_match)}#{tag_suffix}" }
+    else
+      Proc.new {|tag| "#{tag_prefix}#{tag}#{tag_suffix}" }
+    end
   end
 
   # Store internal status into a file

@@ -34,6 +34,11 @@ describe Fluent::StatsNotifierOutput do
         let(:config) { CONFIG + %[greater_than 2 \n greater_equal 3] }
         it { expect { driver }.to raise_error(Fluent::ConfigError) }
       end
+
+      context "not tag option is specified" do
+        let(:config) { %[target_key 5xx_count] }
+        it { expect { driver }.to raise_error(Fluent::ConfigError) }
+      end
     end
 
     describe 'good configuration' do
@@ -165,7 +170,7 @@ describe Fluent::StatsNotifierOutput do
       end
 
       context 'tag' do
-        let(:config) { CONFIG + %[aggregate tag \n add_tag_prefix add] }
+        let(:config) { %[target_key 5xx_count \n aggregate tag \n add_tag_prefix add] }
         before do
           Fluent::Engine.stub(:now).and_return(time)
           Fluent::Engine.should_receive(:emit).with("add.foo.bar1", time, {"5xx_count"=>2.0})
