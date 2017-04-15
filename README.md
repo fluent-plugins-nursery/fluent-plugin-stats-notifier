@@ -1,4 +1,4 @@
-# fluent-plugin-stats-notifier [![Build Status](https://secure.travis-ci.org/sonots/fluent-plugin-stats-notifier.png?branch=master)](http://travis-ci.org/sonots/fluent-plugin-stats-notifier)
+# fluent-plugin-stats-notifier, a plugin for [Fluentd](http://fluentd.org) [![Build Status](https://secure.travis-ci.org/sonots/fluent-plugin-stats-notifier.png?branch=master)](http://travis-ci.org/sonots/fluent-plugin-stats-notifier)
 
 Fluentd plugin to calculate statistics and then thresholding
 
