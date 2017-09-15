@@ -1,3 +1,10 @@
+## 0.0.5 (2017-09-15)
+
+Enchancements:
+
+* Support Fluentd v0.14
+* Support label feature
+
 ## 0.0.4
 
 Enchancements:
