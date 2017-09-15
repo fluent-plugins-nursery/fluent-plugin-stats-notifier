@@ -7,6 +7,11 @@ class Fluent::StatsNotifierOutput < Fluent::Output
     define_method("log") { $log }
   end
 
+  # Define `router` method of v0.12 to support v0.10 or earlier
+  unless method_defined?(:router)
+    define_method("router") { Fluent::Engine }
+  end
+
   def initialize
     super
     require 'pathname'
@@ -174,13 +179,13 @@ class Fluent::StatsNotifierOutput < Fluent::Output
       values = evented_queues.values.map {|queue| queue[@target_key] }.compact
       value = get_stats(values, @aggregate_stats)
       output = generate_output(value) if value
-      Fluent::Engine.emit(@tag, time, output) if output
+      router.emit(@tag, time, output) if output
     else # aggregate tag
       evented_queues.each do |tag, queue|
         value = queue[@target_key]
         output = generate_output(value) if value
         emit_tag = @tag_proc.call(tag)
-        Fluent::Engine.emit(emit_tag, time, output) if output
+        router.emit(emit_tag, time, output) if output
       end
     end
   end
